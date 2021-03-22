@@ -1,3 +1,5 @@
+data "aws_region" "current" {}
+
 # Create namespace ingress-system
 resource "kubernetes_namespace" "alb-ingress-system" {
   depends_on = [
@@ -270,7 +272,7 @@ resource "helm_release" "alb-ingress" {
     {
       cluster_name = var.cluster_name
       vpc_id       = var.vpc_id
-      region       = var.aws_region
+      region       = data.aws_region.current.name
       role-arn     = aws_iam_role.alb-ingress.arn
     })
   ]
