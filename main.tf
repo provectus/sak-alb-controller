@@ -12,6 +12,51 @@ resource "kubernetes_namespace" "alb-ingress-system" {
 
 data "aws_caller_identity" "current" {}
 
+data "aws_elb_service_account" "main" {}
+
+
+resource "aws_s3_bucket" "ingress_logs" {
+
+  count  = var.ingress_logging_enabled ? 1 : 0
+  bucket = "ingress-logs-${var.cluster_name}"
+
+  policy = <<POLICY
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::${data.aws_elb_service_account.main.id}:root"
+      },
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::ingress-logs-${var.cluster_name}/*"
+    },
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "delivery.logs.amazonaws.com"
+      },
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::ingress-logs-${var.cluster_name}/*",
+      "Condition": {
+        "StringEquals": {
+          "s3:x-amz-acl": "bucket-owner-full-control"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "delivery.logs.amazonaws.com"
+      },
+      "Action": "s3:GetBucketAcl",
+      "Resource": "arn:aws:s3:::ingress-logs-${var.cluster_name}"
+    }
+  ]
+}
+POLICY
+}
 
 # Create role for alb-ingress
 resource "aws_iam_policy" "alb-ingress" {
@@ -283,17 +328,19 @@ resource "kubernetes_ingress" "alb-dev-ingress" {
     name      = "alb-ingress"
     namespace = "default"
     annotations = {
-      "alb.ingress.kubernetes.io/certificate-arn"      = join(", ", var.certificates_arns)
-      "alb.ingress.kubernetes.io/healthcheck-path"     = "/health"
-      "alb.ingress.kubernetes.io/healthcheck-protocol" = "HTTP"      
-      "alb.ingress.kubernetes.io/scheme"               = "internet-facing"
-      "alb.ingress.kubernetes.io/group.name"           = "default"
-      "alb.ingress.kubernetes.io/group.order"          = "100"
-      "alb.ingress.kubernetes.io/ssl-policy"           = "ELBSecurityPolicy-TLS-1-2-Ext-2018-06"
-      "alb.ingress.kubernetes.io/listen-ports"         = "[{\"HTTP\":80}, {\"HTTPS\":443}]"
-      "alb.ingress.kubernetes.io/actions.ssl-redirect" = "{\"Type\": \"redirect\", \"RedirectConfig\": { \"Protocol\": \"HTTPS\", \"Port\": \"443\", \"StatusCode\": \"HTTP_301\"}}"
+      "alb.ingress.kubernetes.io/certificate-arn"              = join(", ", var.certificates_arns)
+      "alb.ingress.kubernetes.io/healthcheck-path"             = "/health"
+      "alb.ingress.kubernetes.io/healthcheck-protocol"         = "HTTP"
+      "alb.ingress.kubernetes.io/scheme"                       = "internet-facing"
+      "alb.ingress.kubernetes.io/group.name"                   = "default"
+      "alb.ingress.kubernetes.io/group.order"                  = "100"
+      "alb.ingress.kubernetes.io/ssl-policy"                   = "ELBSecurityPolicy-TLS-1-2-Ext-2018-06"
+      "alb.ingress.kubernetes.io/listen-ports"                 = "[{\"HTTP\":80}, {\"HTTPS\":443}]"
+      "alb.ingress.kubernetes.io/actions.ssl-redirect"         = "{\"Type\": \"redirect\", \"RedirectConfig\": { \"Protocol\": \"HTTPS\", \"Port\": \"443\", \"StatusCode\": \"HTTP_301\"}}"
       "alb.ingress.kubernetes.io/actions.fixed-response-error" = "{\"Type\": \"fixed-response\", \"FixedResponseConfig\": {\"ContentType\":\"text/plain\", \"StatusCode\":\"503\", \"MessageBody\":\"503 error\"}}"
-      "kubernetes.io/ingress.class"                    = "alb"
+      "kubernetes.io/ingress.class"                            = "alb"
+      "alb.ingress.kubernetes.io/load-balancer-attributes"     = "access_logs.s3.enabled=${var.ingress_logging_enabled},access_logs.s3.bucket=ingress-logs-${var.cluster_name},access_logs.s3.prefix=ingress"
+
     }
   }
 

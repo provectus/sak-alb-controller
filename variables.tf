@@ -29,3 +29,10 @@ variable "certificates_arns" {
 variable "cluster_oidc_url" {
   type = string
 }
+
+
+
+variable "ingress_logging_enabled" {
+  type    = bool
+  default = false
+}
