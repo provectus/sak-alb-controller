@@ -44,7 +44,7 @@ resource "kubernetes_ingress" "alb-nginx-ingress" {
                 }
               }
             }
-        } 
+        }
     }   
 }
 
@@ -78,3 +78,17 @@ spec:
               serviceName: "nginx-nginx-ingress-controller"
               servicePort: http
 ```
+
+## Requirements
+
+```
+terraform >= 0.15
+ ```
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| aws | >= 3.0 |
+| helm | >= 1.0 |
+| kubernetes | >= 1.11 |
