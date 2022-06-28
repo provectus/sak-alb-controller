@@ -1,82 +1,63 @@
 The AWS ALB Ingress Controller satisfies Kubernetes ingress resources by provisioning Application Load Balancers.
 
 
-> :warning: For the operator to work correctly, the backend service must have a Node port or Load balancer type
-
-# Example terraform resource kubernetes_ingress for connect alb and nginx
+# Example creating a load balancer (kubectl apply -f example_below.yaml)
 
 ```
-resource "kubernetes_ingress" "alb-nginx-ingress" {
-    metadata {
-        name = "alb-nginx-ingress"
-        namespace = "default"
-        annotations = {
-            "alb.ingress.kubernetes.io/certificate-arn" = "arn:aws:acm:us-west-2:xxxx:certificate/xxxxxx"
-            "alb.ingress.kubernetes.io/healthcheck-path" = "/healthz"
-            "alb.ingress.kubernetes.io/scheme" = "internet-facing"
-            "alb.ingress.kubernetes.io/listen-ports" = "'[{\"HTTP\":80}, {\"HTTPS\":443}]'"
-            "alb.ingress.kubernetes.io/actions.ssl-redirect" = "'{\"Type\": \"redirect\", \"RedirectConfig\": { \"Protocol\": \"HTTPS\", \"Port\": \"443\", \"StatusCode\": \"HTTP_301\"}}'"
-            "kubernetes.io/ingress.class" = "alb"
-        }
-    }
-
-    spec {
-        backend {
-            service_name = "nginx-nginx-ingress-controller"
-            service_port = 80
-        }
-
-        rule {
-            host = var.domains[0]
-            http {
-              path {
-                path = "/*"
-                backend {
-                    service_name = "ssl-redirect"
-                    service_port = "use-annotation"
-                }
-              }                
-              path {
-                path = "/*"
-                backend {
-                    service_name = "nginx-nginx-ingress-controller"
-                    service_port = "80"
-                }
-              }
-            }
-        }
-    }   
-}
-
-```
-
-# Example kubernetes ingress manifest
-
-```
-apiVersion: extensions/v1beta1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployment-2048
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: app-2048
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: app-2048
+    spec:
+      containers:
+      - image: public.ecr.aws/l6m2t8p7/docker-2048:latest
+        imagePullPolicy: Always
+        name: app-2048
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-2048
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: app-2048
+---
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
+  name: ingress-2048
   annotations:
-    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-west-2:xxxx:certificate/xxxxxx
-    alb.ingress.kubernetes.io/healthcheck-path: /healthz
     alb.ingress.kubernetes.io/scheme: internet-facing
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}, {"HTTPS":443}]'
-    alb.ingress.kubernetes.io/actions.ssl-redirect: '{"Type": "redirect", "RedirectConfig": { "Protocol": "HTTPS", "Port": "443", "StatusCode": "HTTP_301"}}'
-    kubernetes.io/ingress.class: alb
-  name: alb-ingress-connect-nginx
-  namespace: ingress-system
+    alb.ingress.kubernetes.io/target-type: ip
 spec:
+  ingressClassName: alb
   rules:
     - http:
         paths:
-          - path: /*
-            backend:
-             serviceName: ssl-redirect
-             servicePort: use-annotation
-          - path: /*
-            backend:
-              serviceName: "nginx-nginx-ingress-controller"
-              servicePort: http
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: service-2048
+              port:
+                number: 80
 ```
 
 ## Requirements
@@ -92,3 +73,17 @@ terraform >= 0.15
 | aws | >= 3.0 |
 | helm | >= 1.0 |
 | kubernetes | >= 1.11 |
+
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:-----:|
+| argocd | A set of values for enabling deployment through ArgoCD | `map(string)` | `{}` | no |
+| cluster\_name | The name of the cluster the charts will be deployed to | `string` | n/a | yes |
+| conf | A set of parameters to pass to Nginx Ingress Controller chart | `map` | `{}` | no |
+| module\_depends\_on | A list of explicit dependencies for the module | `list` | `[]` | no |
+| namespace | A name of the existing namespace | `string` | `"kube-system"` | no |
+| namespace\_name | A name of namespace for creating | `string` | `"external-dns"` | no |
+| tags | A tags for attaching to new created AWS resources | `map(string)` | `{}` | no |
+| vpc\_id | An ID of the VPC | `string` | `""` | yes |

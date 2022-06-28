@@ -1,20 +1,81 @@
+data "aws_eks_cluster" "this" {
+  name = var.cluster_name
+}
+
 data "aws_region" "current" {}
 
-# Create namespace ingress-system
-resource "kubernetes_namespace" "alb_ingress_system" {
-  metadata {
-    name = "alb-ingress-system"
+# if argocd is not deployed, a helm release will be installed
+resource "helm_release" "this" {
+  count = 1 - local.argocd_enabled
+  depends_on = [
+    var.module_depends_on
+  ]
+  name          = local.name
+  repository    = local.repository
+  chart         = local.chart
+  version       = local.chart_version
+  namespace     = local.namespace
+  recreate_pods = true
+  timeout       = 1200
+
+  dynamic "set" {
+    for_each = local.conf
+
+    content {
+      name  = set.key
+      value = set.value
+    }
   }
 }
 
-data "aws_caller_identity" "current" {}
+# if argo is present, a yaml file will be generated for deploying
+resource "local_file" "this" {
+  count = local.argocd_enabled
+  depends_on = [
+    var.module_depends_on
+  ]
+  content  = yamlencode(local.application)
+  filename = "${path.root}/${var.argocd.path}/${local.name}.yaml"
+}
 
+resource "kubernetes_namespace" "this" {
+  count = var.namespace == "kube-system" ? 0 : 1
+  metadata {
+    name = var.namespace_name
+  }
+}
 
-# Create role for alb-ingress
-resource "aws_iam_policy" "alb_ingress" {
-  name = "${var.cluster_name}-alb-ingress-policy"
+# service account to give access to AWS services to your alb ingress controller
+resource "kubernetes_service_account" "service_account" {
+  automount_service_account_token = true
+  metadata {
+    name = local.name
+    annotations = {
+      "eks.amazonaws.com/role-arn" = module.iam_assumable_role_admin.this_iam_role_arn
+    }
+    namespace = local.namespace
+  }
+}
 
-  policy = <<EOF
+module "iam_assumable_role_admin" {
+  source                        = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
+  version                       = "~> v3.6.0"
+  create_role                   = true
+  role_name                     = "${data.aws_eks_cluster.this.id}_${local.name}"
+  provider_url                  = replace(data.aws_eks_cluster.this.identity.0.oidc.0.issuer, "https://", "")
+  role_policy_arns              = [aws_iam_policy.this.arn]
+  oidc_fully_qualified_subjects = ["system:serviceaccount:${local.namespace}:${local.name}"]
+
+  tags = var.tags
+}
+
+resource "aws_iam_policy" "this" {
+  depends_on = [
+    var.module_depends_on
+  ]
+  name_prefix = "${data.aws_eks_cluster.this.id}-alb-controller-"
+  description = "EKS ALB policy for cluster ${data.aws_eks_cluster.this.id}"
+  policy      = <<EOF
 {
     "Version": "2012-10-17",
     "Statement": [
@@ -24,6 +85,7 @@ resource "aws_iam_policy" "alb_ingress" {
                 "iam:CreateServiceLinkedRole",
                 "ec2:DescribeAccountAttributes",
                 "ec2:DescribeAddresses",
+                "ec2:DescribeAvailabilityZones",
                 "ec2:DescribeInternetGateways",
                 "ec2:DescribeVpcs",
                 "ec2:DescribeSubnets",
@@ -171,6 +233,19 @@ resource "aws_iam_policy" "alb_ingress" {
         {
             "Effect": "Allow",
             "Action": [
+                "elasticloadbalancing:AddTags",
+                "elasticloadbalancing:RemoveTags"
+            ],
+            "Resource": [
+                "arn:aws:elasticloadbalancing:*:*:listener/net/*/*/*",
+                "arn:aws:elasticloadbalancing:*:*:listener/app/*/*/*",
+                "arn:aws:elasticloadbalancing:*:*:listener-rule/net/*/*/*",
+                "arn:aws:elasticloadbalancing:*:*:listener-rule/app/*/*/*"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
                 "elasticloadbalancing:ModifyLoadBalancerAttributes",
                 "elasticloadbalancing:SetIpAddressType",
                 "elasticloadbalancing:SetSecurityGroups",
@@ -209,102 +284,4 @@ resource "aws_iam_policy" "alb_ingress" {
     ]
 }
 EOF
-}
-
-# Create role for alb-ingress
-resource "aws_iam_role" "alb_ingress" {
-  name               = "${var.cluster_name}_alb-ingress"
-  description        = "Role for alb-ingress"
-  assume_role_policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": "sts:AssumeRoleWithWebIdentity",
-      "Condition": {
-        "StringEquals": {
-          "${replace(var.cluster_oidc_url, "https://", "")}:sub": "system:serviceaccount:${kubernetes_namespace.alb_ingress_system.metadata[0].name}:alb-aws-load-balancer-controller"
-        }
-      },
-      "Principal": {
-        "Federated": "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/${replace(var.cluster_oidc_url, "https://", "")}"
-      },
-      "Effect": "Allow",
-      "Sid": ""
-    }
-  ]
-}
-EOF
-}
-
-# Attach policy alb-ingress to role alb-ingress
-resource "aws_iam_role_policy_attachment" "alb_ingress" {
-  depends_on = [
-    aws_iam_policy.alb_ingress
-  ]
-  role       = aws_iam_role.alb_ingress.name
-  policy_arn = aws_iam_policy.alb_ingress.arn
-}
-
-resource "helm_release" "alb_ingress" {
-  depends_on = [
-    aws_iam_role.alb_ingress
-  ]
-  name       = "alb"
-  repository = "https://aws.github.io/eks-charts"
-  chart      = "aws-load-balancer-controller"
-  version    = "1.1.5"
-  namespace  = kubernetes_namespace.alb_ingress_system.metadata[0].name
-
-
-  values = [templatefile("${path.module}/values/values.yaml",
-    {
-      cluster_name = var.cluster_name
-      vpc_id       = var.vpc_id
-      region       = data.aws_region.current.name
-      role-arn     = aws_iam_role.alb_ingress.arn
-    })
-  ]
-}
-
-resource "kubernetes_ingress" "alb_dev_ingress" {
-  metadata {
-    name      = "alb-ingress"
-    namespace = "default"
-    annotations = {
-      "alb.ingress.kubernetes.io/certificate-arn"              = join(", ", var.certificates_arns)
-      "alb.ingress.kubernetes.io/healthcheck-path"             = "/health"
-      "alb.ingress.kubernetes.io/healthcheck-protocol"         = "HTTP"
-      "alb.ingress.kubernetes.io/scheme"                       = "internet-facing"
-      "alb.ingress.kubernetes.io/group.name"                   = "default"
-      "alb.ingress.kubernetes.io/group.order"                  = "100"
-      "alb.ingress.kubernetes.io/ssl-policy"                   = "ELBSecurityPolicy-TLS-1-2-Ext-2018-06"
-      "alb.ingress.kubernetes.io/listen-ports"                 = "[{\"HTTP\":80}, {\"HTTPS\":443}]"
-      "alb.ingress.kubernetes.io/actions.ssl-redirect"         = "{\"Type\": \"redirect\", \"RedirectConfig\": { \"Protocol\": \"HTTPS\", \"Port\": \"443\", \"StatusCode\": \"HTTP_301\"}}"
-      "alb.ingress.kubernetes.io/actions.fixed-response-error" = "{\"Type\": \"fixed-response\", \"FixedResponseConfig\": {\"ContentType\":\"text/plain\", \"StatusCode\":\"503\", \"MessageBody\":\"503 error\"}}"
-      "kubernetes.io/ingress.class"                            = "alb"
-    }
-  }
-
-  spec {
-    rule {
-      host = "example.com"
-      http {
-        path {
-          path = "/*"
-          backend {
-            service_name = "ssl-redirect"
-            service_port = "use-annotation"
-          }
-        }
-        path {
-          path = "/*"
-          backend {
-            service_name = "default-backend"
-            service_port = "8080"
-          }
-        }
-      }
-    }
-  }
 }
