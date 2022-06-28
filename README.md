@@ -1,7 +1,7 @@
 The AWS ALB Ingress Controller satisfies Kubernetes ingress resources by provisioning Application Load Balancers.
 
 
-# Example creating a load balancer (kubectl apply -f example_below.yaml)
+# Example manifest for load balancer (kubectl apply -f example_below.yaml)
 
 ```
 ---
@@ -87,3 +87,9 @@ terraform >= 0.15
 | namespace\_name | A name of namespace for creating | `string` | `"external-dns"` | no |
 | tags | A tags for attaching to new created AWS resources | `map(string)` | `{}` | no |
 | vpc\_id | An ID of the VPC | `string` | `""` | yes |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| alb\_ingress | ALB ingress resource |
