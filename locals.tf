@@ -11,18 +11,18 @@ locals {
   chart_version = var.chart_version
   conf          = merge(local.conf_defaults, var.conf)
   conf_defaults = {
-    "resources.limits.cpu"      = "100m",
-    "resources.limits.memory"   = "128Mi",
-    "resources.requests.cpu"    = "50m",
-    "resources.requests.memory" = "64Mi",
-    "region"                    = data.aws_region.current.name
-    "serviceAccount.create"     = false,
-    "serviceAccount.name"       = local.name,
-    "clusterName" : data.aws_eks_cluster.this.name,
-    "ingressClass" : "alb",
-    "disableIngressClassAnnotation" : false,
-    "createIngressClassResource" : true,
-    "vpcId" : local.vpc_id
+    "resources.limits.cpu"          = "100m",
+    "resources.limits.memory"       = "128Mi",
+    "resources.requests.cpu"        = "50m",
+    "resources.requests.memory"     = "64Mi",
+    "region"                        = data.aws_region.current.name
+    "serviceAccount.create"         = false,
+    "serviceAccount.name"           = local.name,
+    "clusterName"                   = data.aws_eks_cluster.this.name,
+    "ingressClass"                  = "alb",
+    "disableIngressClassAnnotation" = false,
+    "createIngressClassResource"    = true,
+    "vpcId"                         = local.vpc_id
 
   }
   application = {
