@@ -11,8 +11,6 @@ locals {
   chart_version = var.chart_version
   conf          = merge(local.conf_defaults, var.conf)
   conf_defaults = {
-
-    #"storageClasses[0].annotations.storageclass\\.kubernetes\\.io/is-default-class" = "\"true\"",
     "resources.limits.cpu"      = "100m",
     "resources.limits.memory"   = "128Mi",
     "resources.requests.cpu"    = "50m",
@@ -25,8 +23,6 @@ locals {
     "disableIngressClassAnnotation" : false,
     "createIngressClassResource" : true,
     "vpcId" : local.vpc_id
-
-
 
   }
   application = {

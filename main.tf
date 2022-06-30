@@ -69,6 +69,7 @@ module "iam_assumable_role_admin" {
   tags = var.tags
 }
 
+# IAM policy to allow controller to manage AWS services
 resource "aws_iam_policy" "this" {
   depends_on = [
     var.module_depends_on
