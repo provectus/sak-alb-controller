@@ -1,4 +1,11 @@
-The AWS ALB Ingress Controller satisfies Kubernetes ingress resources by provisioning Application Load Balancers.
+## Overview
+
+[AWS Load Balancer Controller](https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html) is a controller to help manage Elastic Load Balancers for a Kubernetes cluster.
+
+
+* **Application Load Balancer** - It satisfies Kubernetes [Ingress resources](https://kubernetes.io/docs/concepts/services-networking/ingress/) by provisioning [Application Load Balancers](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/introduction.html)
+* **Network Load Balancer** - It satisfies Kubernetes [Service resources](https://kubernetes.io/docs/concepts/services-networking/service/) by provisioning [Network Load Balancers](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/introduction.html).
+
 
 
 # Example manifest for load balancer (kubectl apply -f example_below.yaml)
