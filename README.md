@@ -8,6 +8,8 @@
 
 ## How it works (Application Load Balancer)
 
+* **The following diagram details the AWS components this controller creates. It also demonstrates the route ingress traffic takes from the ALB to the Kubernetes cluster.
+
 ![alt text](https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/assets/images/controller-design.png)
 
 
