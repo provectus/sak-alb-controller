@@ -8,7 +8,7 @@
 
 ## How it works
 
-<br /> ![alt text](https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/assets/images/controller-design.png)
+<br /> <br /> <br /> ![alt text](https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/assets/images/controller-design.png)
 
 ## Example manifest for load balancer (kubectl apply -f example_below.yaml)
 
