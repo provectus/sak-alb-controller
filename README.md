@@ -6,12 +6,12 @@
 * **Application Load Balancer** - It satisfies Kubernetes [Ingress resources](https://kubernetes.io/docs/concepts/services-networking/ingress/) by provisioning [Application Load Balancers](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/introduction.html)
 * **Network Load Balancer** - It satisfies Kubernetes [Service resources](https://kubernetes.io/docs/concepts/services-networking/service/) by provisioning [Network Load Balancers](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/introduction.html).
 
-## How it works
+## How it works (Application Load Balancer)
 
 ![alt text](https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/assets/images/controller-design.png)
 
 
-## Example manifest for load balancer (kubectl apply -f example_below.yaml)
+## Example manifest to provision a load balancer (kubectl apply -f example_below.yaml)
 
 ```
 ---
