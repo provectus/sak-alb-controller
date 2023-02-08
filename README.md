@@ -77,7 +77,7 @@ spec:
 ## Requirements
 
 ```
-terraform >= 0.15
+terraform >= 1.1
  ```
 
 ## Providers
@@ -107,3 +107,15 @@ terraform >= 0.15
 | Name | Description |
 |------|-------------|
 | alb\_ingress | ALB ingress resource |
+
+## Example
+This example demonstrates how you can use alb controller.
+``` hcl
+module "alb-ingress" {
+  depends_on   = [module.argocd]
+  source       = "github.com/provectus/sak-alb-controller"
+  cluster_name = module.eks.cluster_id
+  vpc_id       = module.network.vpc_id
+  argocd       = module.argocd.state
+}
+```
