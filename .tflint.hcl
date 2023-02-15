@@ -3,9 +3,6 @@ config {
   force = false
   disabled_by_default = false
   variables = ["cluster_name=github-actions-cluster"]
-  ignore_module = {
-    "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc" = true
-  }
 }
 
 plugin "aws" {
