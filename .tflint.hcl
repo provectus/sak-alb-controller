@@ -3,10 +3,15 @@ config {
   force = false
   disabled_by_default = false
   variables = ["cluster_name=github-actions-cluster"]
+  ignore_module = {
+    "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc" = true
+  }
 }
 
 plugin "aws" {
   enabled = true
+  version = "0.17.1"
+  source  = "github.com/terraform-linters/tflint-ruleset-aws"
 }
 
 rule "aws_instance_invalid_type" {
