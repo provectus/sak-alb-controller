@@ -1,3 +1,11 @@
+# Swiss Army Kube Load Balancer Controller Module
+
+Check out main repo of Swiss Army Kube for more information about the project in general.
+
+**[Swiss Army Kube](https://github.com/provectus/swiss-army-kube)**
+
+**[Contributing Guide](https://github.com/provectus/swiss-army-kube/blob/master/CONTRIBUTING.md)**
+
 ## Overview
 
 [AWS Load Balancer Controller](https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html) is a controller to help manage Elastic Load Balancers for a Kubernetes cluster.
