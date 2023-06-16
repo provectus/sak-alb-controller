@@ -1,6 +1,6 @@
 locals {
   argocd_enabled = length(var.argocd) > 0 ? 1 : 0
-  namespace      = coalescelist(kubernetes_namespace.this, [{ "metadata" = [{ "name" = var.namespace }] }])[0].metadata[0].name
+  namespace      = var.namespace
 }
 
 locals {
@@ -56,6 +56,9 @@ locals {
         "automated" = {
           "prune"    = true
           "selfHeal" = true
+        }
+        "syncOptions" = {
+          "createNamespace" = true
         }
       }
     }

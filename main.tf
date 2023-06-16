@@ -38,13 +38,6 @@ resource "local_file" "this" {
   filename = "${path.root}/${var.argocd.path}/${local.name}.yaml"
 }
 
-resource "kubernetes_namespace" "this" {
-  count = var.namespace == "kube-system" ? 0 : 1
-  metadata {
-    name = var.namespace_name
-  }
-}
-
 # service account to give access to AWS services to your alb ingress controller
 resource "kubernetes_service_account" "service_account" {
   automount_service_account_token = true

@@ -26,12 +26,6 @@ variable "namespace" {
   description = "A name of the existing namespace"
 }
 
-variable "namespace_name" {
-  type        = string
-  default     = "kube-system"
-  description = "A name of namespace for creating"
-}
-
 variable "module_depends_on" {
   default     = []
   type        = list(any)
